@@ -10,12 +10,12 @@ namespace WEB
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            
+
             builder.Services.AddDbContext<ApplicationDBContext>(options => options.UseSqlServer(
                  builder.Configuration.GetConnectionString("DefaultConnection")
                 ));
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-           
+
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 

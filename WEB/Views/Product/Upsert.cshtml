@@ -3,59 +3,58 @@
 <form method="post" asp-action="Upsert" enctype="multipart/form-data">
     <input asp-for="Product.Id" hidden />
     <div class="row">
-        
-            <div class="border p-3 mt-4 row">
-                <div class="col-12 pb-2">
-                    <h2 class="text-primary">@(Model.Product?.Id != 0 ? "Update " : "Create ") Product</h2>
-                    <hr />
-                </div>
-                @*  <div asp-validation-summary="All"></div> *@
-                <div class="mb-3">
-                    <label asp-for="Product.Title"></label>
-                    <input asp-for="Product.Title" class="form-control" />
-                    <span asp-validation-for="Product.Title" class="text-danger"></span>
-                </div>
-                <div class="mb-3">
-                    <label asp-for="Product.Description"></label>
-                    <textarea asp-for="Product.Description" row="3" class="form-control"></textarea>
-                    <span asp-validation-for="Product.Description" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3 col-6">
-                    <input type="checkbox" asp-for="Product.Active" class="form-check-input" />
-                    <label class="form-check-label" for="flexCheckDefault">
-                        Is Active
-                    </label>
-                </div>
-                <div class="mb-3 col-6">
-                <label asp-for="Product.CreatedDate"></label>
-                    <input type="text" asp-for="Product.CreatedDate" asp-format=" {0:dd/MM/yyyy}" class="form-control" id="datepicker" />
-                    <span asp-validation-for="Product.CreatedDate" class="text-danger"></span>
-                </div>
-                <div class="mb-3 col-6">
-                    <label asp-for="Product.Addings"></label>
-                    <input asp-for="Product.Addings" class="form-control" />
-                    <span asp-validation-for="Product.Addings" class="text-danger"></span>
-                </div>
-                <div class="mb-3 col-6">
-                    <label asp-for="Product.Price"></label>
-                    <input asp-for="Product.Price" class="form-control" />
-                    <span asp-validation-for="Product.Price" class="text-danger"></span>
-                </div>
-                <div class="col-12">
-                    @if (Model.Product?.Id != 0)
-                    {
-                        <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
-                    }
-                    else
-                    {
-                        <button type="submit" class="btn btn-primary" style="width:150px">Create</button>
-                    }
-                    <a asp-asp-controller="Product" asp-action="Index" class="btn btn-secondary" style="width:150px">
-                        Back To List
-                    </a>
-                </div>
+        <div class="border p-3 mt-4 row">
+            <div class="col-12 pb-2">
+                <h2 class="text-primary">@(Model.Product?.Id != 0 ? "Update " : "Create ") Product</h2>
+                <hr />
             </div>
+            @*  <div asp-validation-summary="All"></div> *@
+            <div class="mb-3">
+                <label asp-for="Product.Title"></label>
+                <input asp-for="Product.Title" class="form-control" />
+                <span asp-validation-for="Product.Title" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Product.Description"></label>
+                <textarea asp-for="Product.Description" row="3" class="form-control"></textarea>
+                <span asp-validation-for="Product.Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 col-6">
+                <input type="checkbox" asp-for="Product.Active" class="form-check-input" />
+                <label class="form-check-label" for="flexCheckDefault">
+                    Is Active
+                </label>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="Product.CreatedDate"></label>
+                <input type="text" asp-for="Product.CreatedDate" asp-format=" {0:dd/MM/yyyy}" class="form-control" id="datepicker" />
+                <span asp-validation-for="Product.CreatedDate" class="text-danger"></span>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="Product.Addings"></label>
+                <input asp-for="Product.Addings" class="form-control" />
+                <span asp-validation-for="Product.Addings" class="text-danger"></span>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="Product.Price"></label>
+                <input asp-for="Product.Price" class="form-control" />
+                <span asp-validation-for="Product.Price" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                @if (Model.Product?.Id != 0)
+                {
+                    <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-primary" style="width:150px">Create</button>
+                }
+                <a asp-asp-controller="Product" asp-action="Index" class="btn btn-secondary" style="width:150px">
+                    Back To List
+                </a>
+            </div>
+        </div>
     </div>
 </form>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -65,11 +64,9 @@
     @{
         <partial name="_validationscriptspartial" />
     }
-}  
-   
- 
-<script>
+}
 
+<script>
     $('#datepicker').datepicker({
         format: "dd/mm/yyyy",
         language: "he",
