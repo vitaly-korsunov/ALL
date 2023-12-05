@@ -1,0 +1,28 @@
+﻿
+<div class="row">
+    <div class=" mt-4 row">
+        <div class="col-12 pb-2">
+            <a asp-controller="Product" asp-action="Upsert" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> &nbsp; Create New Product
+            </a>
+        </div>
+<div>
+    <table id="myTable" class="table table-bordered table-striped text-dark" style="width:100%">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Addings</th>
+                <th>Price</th>
+                <th>Active</th>
+                <th>Ceated Date</th>
+                <th></th>
+            </tr>
+        </thead>
+
+    </table>
+</div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/js/help.js"></script>
+}

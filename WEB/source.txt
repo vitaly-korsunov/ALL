@@ -1,0 +1,667 @@
+Create  Solution SolutionApp
+Create Project WebApp
+
+ Add nudget Microsoft.EntityFrameworkCore.Design 7.0.14
+ Add nudget Microsoft.EntityFrameworkCore 7.0.14
+in file Programme.cs add
+ builder.Services.AddDbContext<ApplicationDBContext>(options => options.UseSqlServer(
+                 builder.Configuration.GetConnectionString("DefaultConnection")
+     ));
+ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+ ---------------------------------------------------------------
+ in file appsettings.json add
+ "ConnectionStrings": {
+  "DefaultConnection": "server=LAPTOP-I7OKMQKR;database=Bulky;Trusted_Connection=True;MultipleActiveResultSets=true;User ID=sa;Password=1!Korsunov;Integrated Security=True;TrustServerCertificate=True"
+}
+----------------------------------------------------------------
+Add Project Models Class Library
+Nget
+Microsoft.AspNetCore.Mvc.ViewFeatures 2.1.3
+move from Project WebApp ErrorViewModel.cs to Models
+Create class Product.cs in Models 
+ public class Product
+ {
+     [Key]
+     public int Id { get; set; }
+     [Required]
+     public string? Title { get; set; }
+     public string? Description { get; set; }
+     [Required]
+     public DateTime? CreatedDate { get; set; }
+    // [@CustomValidation]
+     public int? Addings { get; set; }
+     public bool Active { get; set; }
+     [Required]
+     [Range(1, 10000)]
+     public Double? Price { get; set; }
+ }
+----------------------------------------------------------------
+Create class CustomValidation.cs in Models 
+public class CustomValidation : ValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        var product = (Product)validationContext.ObjectInstance;
+        if (product.Addings > 200)  
+        {
+           // product.CreatedDate.Value.Year;
+           if(product.CreatedDate.Value >  DateTime.Now) 
+            {
+                return new ValidationResult("Mast be less then today");
+            }
+            else
+            {
+                return ValidationResult.Success;
+            }
+        }
+        else
+        {
+            return new ValidationResult("Mast be greate then 200");
+        }
+
+    }
+}
+----------------------------------------------------------------------------
+Add   Project Models ViewModel Folder
+Add ProductVM.cs in folder ViewModel
+ public class ProductVM
+ {
+     public Product?  Product { get; set; }
+  /*    
+	[ValidateNever]
+     public IEnumerable<SelectListItem>? CategoryList  { get; set; }
+     [ValidateNever]
+     public IEnumerable<SelectListItem>? CoverTypeList { get; set; }
+   */
+     //IEnumerable<SelectListItem> CategoryList = _unitOfWork.Category.GetAll().Select(
+     //   u => new SelectListItem
+     //   {
+     //       Text = u.Name,
+     //       Value = u.Id.ToString()
+     //   });
+     //IEnumerable<SelectListItem> CoverTypeList = _unitOfWork.CoverType.GetAll().Select(
+     //  u => new SelectListItem
+     //  {
+     //      Text = u.Name,
+     //      Value = u.Id.ToString()
+     //  });
+ }
+----------------------------------------------------------------
+Add Project DAL Class Library
+Delete Class1
+Nget
+Microsoft.EntityFrameworkCore 7.0.14
+Microsoft.EntityFrameworkCore.Design 7.0.14
+Microsoft.EntityFrameworkCore.SqlServer 7.0.14
+Microsoft.EntityFrameworkCore.Tools 7.0.14
+--------------------------------------------------------------------------------
+Add Folder Data
+Add File ApplicationDBContext.cs
+
+    public class ApplicationDBContext:DbContext
+    {
+       
+        public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options) : base(options)
+        {      
+        }
+      //  public DbSet<Category> Categories { get; set; }
+     //  public DbSet<CoverType> CoverTypes { get; set; }
+        public DbSet<Product> Products { get; set; }
+
+
+    }
+---------------------------------------------------------------------------------
+Add Folder Repository
+Add Folder IRepository
+Add File  IRepository.cs in Folder IRepository
+
+public interface IRepository<T> where T : class
+{
+    T GetFirstOrDefault(Expression<Func<T, bool>> filter ,string? includeProperty = null);
+    IEnumerable<T> GetAll(string? includeProperty = null);
+    void Add(T entity);
+    void Remove(T entity);
+    void RemoveRange(IEnumerable<T> entity);
+}
+
+-------------------------------------------------------------
+Add Repository.cs in folder Repository
+  public class Repository<T> : IRepository<T> where T : class
+{
+    private readonly ApplicationDBContext _db;
+    internal DbSet<T> dbSet;
+    public Repository(ApplicationDBContext db)
+    {
+        _db = db;
+        this.dbSet = _db.Set<T>();
+    }
+   public void Add(T entity)
+    {
+        dbSet.Add(entity);
+    }
+
+   public IEnumerable<T>  GetAll(string? includeProperty = null)
+    {
+        IQueryable<T> query = dbSet;
+        if(includeProperty!=null)
+        {
+            foreach (var includeProp in includeProperty.Split(new char[] {','},StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp);
+            }
+
+        }
+        return query.ToList();
+    }
+
+   public T GetFirstOrDefault(Expression<Func<T, bool>> filter, string? includeProperty = null)
+    {
+        IQueryable<T> query = dbSet;
+        query = query.Where(filter);
+        if (includeProperty != null)
+        {
+            foreach (var includeProp in includeProperty.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                query = query.Include(includeProp);
+            }
+
+        }
+        return query.FirstOrDefault();
+    }
+
+   public void Remove(T entity)
+    {
+        dbSet.Remove(entity);
+    }
+
+   public void RemoveRange(IEnumerable<T> entity)
+    {
+        dbSet.RemoveRange(entity);
+    }
+}
+---------------------------------------------------------------------------------------------------------------------------
+ Add IUnitOfWork.cs in folder IRepository
+ public interface IUnitOfWork
+{
+  //  public   ICategoryRepository Category { get; }
+  //  public ICoverTypeRepository CoverType { get; }
+    public IProductRepository Product { get; }
+
+    public void Save();
+}
+-------------------------------------------------------------------------------------------------------------------------
+Add File UnitOfWork.cs to folder Repository
+ public class UnitOfWork : IUnitOfWork
+ {
+     private readonly ApplicationDBContext _db;
+
+    // public  ICategoryRepository  Category { get; private set; }
+   //  public ICoverTypeRepository CoverType { get; private set; }
+     public IProductRepository Product { get; private set; }
+
+     public UnitOfWork(ApplicationDBContext db)
+     {
+         _db = db;
+      //   Category = new CategoryRepository(_db);
+     //    CoverType = new CoverTypeRepository(_db);
+         Product = new ProductRepository(_db);
+     }
+    public   void Save()
+     {
+          _db.SaveChanges();
+         
+     }
+ }
+ -----------------------------------------------------------------------------------------------------
+ Add File IProductRepository.cs in folder IRepository
+ public interface IProductRepository : IRepository<Product>
+{
+     void Update(Product obj);
+     
+}
+------------------------------------------------------------------------------------------------------
+Add File ProductRepository.cs in folder Repository
+  public class ProductRepository : Repository<Product>, IProductRepository
+  {
+      private readonly ApplicationDBContext _db;
+      public ProductRepository(ApplicationDBContext db) : base(db)
+      {
+          _db = db;
+      }
+      public void Update(Product obj)
+      {
+          // _db.Products.Update(obj);
+          var objFromDb = _db.Products.FirstOrDefault(p => p.Id == obj.Id);
+          if (objFromDb != null)
+          {
+              objFromDb.Title = obj.Title;
+              objFromDb.Description = obj.Description;
+              objFromDb.Price = obj.Price;
+              objFromDb.Active = obj.Active;
+              objFromDb.CreatedDate = obj.CreatedDate;
+              objFromDb.Addings = obj.Addings;
+              //objFromDb.CategoryId = obj.CategoryId;
+              //objFromDb.CoverTypeId = obj.CoverTypeId;
+              
+          }
+      }
+  }
+  ----------------------------------------------------------------------------------------
+  PM> add-migration AddProductToDB
+  PM> update-database
+
+  Full _Layout.cshtml
+
+  ------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - WebApp</title>
+
+
+    <link rel="stylesheet" href="~/WebApp.styles.css" asp-append-version="true" /> 
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">  
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="//cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg bg-light" data-bs-theme="light">
+            <div class="container-fluid">
+                    <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarColor03">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link " asp-controller="Product" asp-action="Index">Product</a>
+                            </li>
+                        </ul>
+                    </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            <partial name="_Notification" />
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+-------------------------------------------------------------------------------------------------
+add _Notification view(parshal) in shared folder
+ <partial name="_Notification" />
+add before  @RenderBody()
+
+@if (TempData["success"] != null)
+{
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script type="text/javascript">
+        toastr.success('@TempData["success"]')
+    </script>
+}
+
+@if (TempData["error"] != null)
+{
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script type="text/javascript">
+        toastr.error('@TempData["error"]')
+    </script>
+---------------------------------------------------------------------------------------------------
+add javascript to wwwroot/js folder
+file help.js
+var dataTable;
+$(document).ready(function () {
+    loadDataTable();
+});
+function loadDataTable() {
+    dataTable = $('#myTable').DataTable({
+        "ajax": {
+            "url": "/Product/GetAll"
+        },
+        "columns": [
+            { "data": "title", "width": "15%" },
+            { "data": "addings", "width": "15%" },
+            { "data": "price", "width": "15%" },
+            {
+                "data": "active",
+                render: function (data) {
+                    return data === true ?
+                        'Active' :
+                        'Non Active';
+                },
+                "width": "15%"
+            },
+            {
+                "data": "createdDate",
+                "render": function (data) {
+                    if (data == null) return "";
+                    var date = new Date(data);
+                    var month = date.getMonth() + 1;
+                    return ('0'+ date.getDate()).slice(-2) + "/" +('0'+ month).slice(-2)+ "/" +date.getFullYear();
+                   },
+                "width": "15%"
+              }   ,
+            {
+                "data": "id",
+                "render": function (data) {
+                    return `
+                    <div class="w-75 btn-group" role = "group">
+                        <a href = "/Product/Upsert?id=${data}"
+                    class="btn btn-primary me-2"> <i class="bi bi-pencil-square"></i> Edit</a>
+                        <button type="button" onclick=Delete('/Product/Delete/'+${data}) class="btn btn-danger me-2"> <i class="bi bi-trash-fill"></i> Delete</button>
+                    </div > 
+                    `
+                },
+                "width": "25%"
+            }
+        ]
+    });
+}
+
+function Delete(url) {
+
+    Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, delete it!"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                success: function (data) {
+                    if (data.success) {
+                        dataTable.ajax.reload();
+                        toastr.success(data.message);
+                    } else {
+                        toastr.error(data.message);
+                    }
+                }
+            })
+        }
+    });
+}
+-------------------------------------------------------------------------------------------------------------------------------------------
+Create Product Controller
+using DAL.Repository;
+using DAL.Repository.IRepository;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Hosting;
+using Models.ViewModel;
+
+namespace WebApp.Controllers
+{
+    public class ProductController : Controller
+    {
+        private readonly IUnitOfWork _unitOfWork;
+      //  private readonly IWebHostEnvironment _hostEnvironment;
+        public ProductController(IUnitOfWork unitOfWork)//, IWebHostEnvironment hostEnvironment)
+        {
+            _unitOfWork = unitOfWork;
+          //  _hostEnvironment = hostEnvironment;
+        }
+
+
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        public IActionResult Upsert(int? id=null)
+        {
+            // Product product = new Product();
+
+            ProductVM productVM = new()
+            {
+                Product = new() 
+                /*
+                ,
+                CategoryList = _unitOfWork.Category.GetAll().Select(c => new SelectListItem
+                {
+                    Text = c.Name,
+                    Value = c.Id.ToString(),
+                }),
+                CoverTypeList = _unitOfWork.CoverType.GetAll().Select(c => new SelectListItem
+                {
+                    Text = c.Name,
+                    Value = c.Id.ToString()
+                })
+                */
+            };
+
+
+
+          
+            if (id == null || id == 0)
+            {
+                // create product
+                //  ViewBag.CategoryList = CategoryList;
+                //  ViewData["CoverTypeList"] = CoverTypeList;
+                return View(productVM);
+            }
+            else
+            {
+                productVM.Product = _unitOfWork.Product.GetFirstOrDefault(c => c.Id == id);
+                // update product
+                return View(productVM);
+            }
+
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Upsert(ProductVM obj)
+        {
+            if (ModelState.IsValid)
+            {
+                if (obj?.Product?.Id == 0)
+                {
+                    _unitOfWork.Product.Add(obj.Product);
+                }
+                else
+                {
+                    _unitOfWork.Product.Update(obj.Product);
+                }
+
+                _unitOfWork.Save();
+                TempData["success"] = "Product created successfully";
+                return RedirectToAction("Index");
+            }
+            return View(obj);
+        }
+        #region API CALL
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var productList = _unitOfWork.Product.GetAll();
+            return Json(new { data = productList });
+        }
+
+        [HttpDelete]
+        public IActionResult Delete(int? id)
+        {
+            var obj = _unitOfWork.Product.GetFirstOrDefault(c => c.Id == id);
+            if (obj == null)
+            {
+                return Json(new { success = false, Message = "Error while deleting" });
+            }
+           
+            _unitOfWork.Product.Remove(obj);
+            _unitOfWork.Save();
+            return Json(new { success = true, Message = "Delete Successful" });
+
+        }
+        #endregion
+    }
+
+}
+---------------------------------------------------------------------------------------------------
+Create view Index
+<div class="container p-3">
+    <div class="row pt-4">
+        <div class="col-6">
+            <h2 class="text-primary">Product</h2>
+        </div>
+        <div class="col-6 text-end">
+            <a asp-controller="Product" asp-action="Upsert" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> &nbsp; Create New Product
+            </a>
+        </div>
+    </div>
+</div>
+<div>
+    <table id="myTable" class="table table-bordered table-striped text-dark" style="width:100%">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Addings</th>
+                <th>Price</th>
+                <th>Active</th>
+                <th>Ceated Date</th>
+                <th></th>
+            </tr>
+        </thead>
+
+    </table>
+
+</div>
+@section Scripts{
+    <script src="~/js/help.js"></script>
+}
+----------------------------------------------------------------------------------------
+create view Upsert
+@model MODEL.ViewModel.ProductVM
+
+<form method="post" asp-action="Upsert" enctype="multipart/form-data">
+    <input asp-for="Product.Id" hidden />
+    <div class="row">
+        
+            <div class="border p-3 mt-4 row">
+                <div class="col-12 pb-2">
+                    <h2 class="text-primary">@(Model.Product?.Id != 0 ? "Update " : "Create ") Product</h2>
+                    <hr />
+                </div>
+                @*  <div asp-validation-summary="All"></div> *@
+                <div class="mb-3">
+                    <label asp-for="Product.Title"></label>
+                    <input asp-for="Product.Title" class="form-control" />
+                    <span asp-validation-for="Product.Title" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Product.Description"></label>
+                    <textarea asp-for="Product.Description" row="3" class="form-control"></textarea>
+                    <span asp-validation-for="Product.Description" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 col-6">
+                    <input type="checkbox" asp-for="Product.Active" class="form-check-input" />
+                    <label class="form-check-label" for="flexCheckDefault">
+                        Is Active
+                    </label>
+                </div>
+                <div class="mb-3 col-6">
+                <label asp-for="Product.CreatedDate"></label>
+                    <input type="text" asp-for="Product.CreatedDate" asp-format=" {0:dd/MM/yyyy}" class="form-control" id="datepicker" />
+                    <span asp-validation-for="Product.CreatedDate" class="text-danger"></span>
+                </div>
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.Addings"></label>
+                    <input asp-for="Product.Addings" class="form-control" />
+                    <span asp-validation-for="Product.Addings" class="text-danger"></span>
+                </div>
+                <div class="mb-3 col-6">
+                    <label asp-for="Product.Price"></label>
+                    <input asp-for="Product.Price" class="form-control" />
+                    <span asp-validation-for="Product.Price" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    @if (Model.Product?.Id != 0)
+                    {
+                        <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-primary" style="width:150px">Create</button>
+                    }
+                    <a asp-asp-controller="Product" asp-action="Index" class="btn btn-secondary" style="width:150px">
+                        Back To List
+                    </a>
+                </div>
+            </div>
+    </div>
+</form>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+@* <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.min.js"></script>
+ *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+
+<script>
+
+    $('#datepicker').datepicker({
+        format: "dd/mm/yyyy",
+        language: "he",
+        autoclose: true,
+        todayHighlight: true
+    });
+</script>
+
+
+
+new view   Index
+ --------------------------------------------------------------------------------------------------
+
+<div class="row">
+    <div class=" mt-4 row">
+        <div class="col-12 pb-2">
+            <a asp-controller="Product" asp-action="Upsert" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> &nbsp; Create New Product
+            </a>
+        </div>
+<div>
+    <table id="myTable" class="table table-bordered table-striped text-dark" style="width:100%">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Addings</th>
+                <th>Price</th>
+                <th>Active</th>
+                <th>Ceated Date</th>
+                <th></th>
+            </tr>
+        </thead>
+
+    </table>
+</div>
+    </div>
+</div>
+@section Scripts{
+    <script src="~/js/help.js"></script>
+}----------------------------------------------------------------------------------------------------
+
